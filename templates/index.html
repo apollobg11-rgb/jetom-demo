@@ -1,1 +1,339 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ЖЕТОМ ТРАНС — Командировъчни</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .main-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 40px;
+            margin-top: 20px;
+        }
+        h1 {
+            color: #764ba2;
+            font-weight: bold;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        h3 {
+            color: #667eea;
+            margin-top: 30px;
+            margin-bottom: 20px;
+        }
+        .upload-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 8px;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .stats-card h4 {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .stats-card p {
+            margin: 0;
+            opacity: 0.9;
+        }
+        table {
+            font-size: 14px;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #f0f0f0;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            border-width: 0.3rem;
+        }
+        .alert {
+            border-radius: 8px;
+        }
+        .badge {
+            font-size: 0.9em;
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-card">
+            <h1>🚛 ЖЕТОМ ТРАНС — Калкулатор за командировъчни</h1>
+            <p class="text-center text-muted mb-4">Фаза 1: GPS Система 1 - Тестване на Travel Blocks</p>
+            
+            <div class="upload-section">
+                <h3>📁 Качете файлове</h3>
+                <form id="uploadForm" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="gps1File" class="form-label">GPS Система 1 (.xlsx) <span class="text-danger">*задължително</span></label>
+                        <input type="file" class="form-control form-control-lg" id="gps1File" name="gps1_file" accept=".xlsx" required>
+                        <div class="form-text">Пример: 1_01_Маршрути___пробег__работапрестой___01-11-2025_to_30-11-2025_20251211151025.xlsx</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="gps2File" class="form-label">GPS Система 2 (.xlsx) <span class="text-muted">- опционално</span></label>
+                        <input type="file" class="form-control form-control-lg" id="gps2File" name="gps2_file" accept=".xlsx">
+                        <div class="form-text">Пример: data__8_.xlsx (множество sheets, всеки = 1 камион)</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="mappingFile" class="form-label">Камион-Шофьор mapping (.csv) <span class="text-muted">- опционално</span></label>
+                        <input type="file" class="form-control form-control-lg" id="mappingFile" name="mapping_file" accept=".csv">
+                        <div class="form-text">Пример: mapping_example.csv (формат: Камион;Шофьор)</div>
+                    </div>
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            🚀 ИЗЧИСЛИ КОМАНДИРОВКИ
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="loadingSection" style="display: none;">
+                <div class="loading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Обработва се...</span>
+                    </div>
+                    <p class="mt-3">Обработване на GPS данни...</p>
+                </div>
+            </div>
+
+            <div id="errorSection" style="display: none;">
+                <div class="alert alert-danger" role="alert">
+                    <strong>❌ Грешка:</strong> <span id="errorMessage"></span>
+                </div>
+            </div>
+
+            <div id="resultsSection" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="mb-0">📊 Статистика</h3>
+                    <button id="downloadExcelBtn" class="btn btn-success btn-lg">
+                        📥 Изтегли Excel
+                    </button>
+                </div>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h4 id="statTotalRecords">0</h4>
+                            <p>Общо GPS записа</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h4 id="statAbroadRecords">0</h4>
+                            <p>В чужбина</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h4 id="statTrucks">0</h4>
+                            <p>Камиони с командировки</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <h4 id="statBlocks">0</h4>
+                            <p>Travel Blocks</p>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>🗺️ Детайлни Travel Blocks</h3>
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped" id="blocksTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Шофьор</th>
+                                <th>Камион</th>
+                                <th>Блок №</th>
+                                <th>От</th>
+                                <th>До</th>
+                                <th>Държава</th>
+                                <th>Дни</th>
+                                <th>EUR/ден</th>
+                                <th>Сума EUR</th>
+                                <th>Сума BGN</th>
+                                <th>GPS записи</th>
+                            </tr>
+                        </thead>
+                        <tbody id="blocksTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const EUR_TO_BGN = 1.95583;
+
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Скриваме всички секции
+            document.getElementById('errorSection').style.display = 'none';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('loadingSection').style.display = 'block';
+            
+            const formData = new FormData();
+            const gps1File = document.getElementById('gps1File').files[0];
+            const gps2File = document.getElementById('gps2File').files[0];
+            const mappingFile = document.getElementById('mappingFile').files[0];
+            
+            formData.append('gps1_file', gps1File);
+            if (gps2File) formData.append('gps2_file', gps2File);
+            if (mappingFile) formData.append('mapping_file', mappingFile);
+            
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                document.getElementById('loadingSection').style.display = 'none';
+                
+                if (data.error) {
+                    document.getElementById('errorMessage').textContent = data.error;
+                    document.getElementById('errorSection').style.display = 'block';
+                    return;
+                }
+                
+                // Показваме статистика
+                document.getElementById('statTotalRecords').textContent = data.stats.total_records;
+                document.getElementById('statAbroadRecords').textContent = 
+                    `${data.stats.abroad_records} (${data.stats.abroad_percentage}%)`;
+                document.getElementById('statTrucks').textContent = 
+                    `${data.stats.trucks_with_travel}/${data.stats.total_trucks}`;
+                document.getElementById('statBlocks').textContent = data.stats.total_blocks;
+                
+                // Показваме таблица с блокове
+                const tbody = document.getElementById('blocksTableBody');
+                tbody.innerHTML = '';
+                
+                let prevDriver = null;
+                let prevTruck = null;
+                data.data.forEach(block => {
+                    const eurAmount = block.days * block.eur_rate;
+                    const bgnAmount = eurAmount * EUR_TO_BGN;
+                    
+                    const tr = document.createElement('tr');
+                    
+                    // Показваме шофьора само на първия ред
+                    const driverCell = prevDriver === block.driver ? '' : 
+                        `<strong>${block.driver || block.truck}</strong>`;
+                    prevDriver = block.driver;
+                    
+                    // Показваме камиона само ако е различен от предишния
+                    const truckCell = prevTruck === block.truck ? '' : block.truck;
+                    if (prevDriver !== block.driver) {
+                        prevTruck = null; // Reset truck когато сменяме шофьора
+                    }
+                    prevTruck = block.truck;
+                    
+                    tr.innerHTML = `
+                        <td>${driverCell}</td>
+                        <td>${truckCell}</td>
+                        <td>${block.block_num}</td>
+                        <td>${block.start_date}</td>
+                        <td>${block.end_date}</td>
+                        <td><span class="badge bg-info">${block.country}</span></td>
+                        <td><strong>${block.days}</strong></td>
+                        <td>${block.eur_rate}</td>
+                        <td><strong>${eurAmount.toFixed(2)}</strong></td>
+                        <td><strong>${bgnAmount.toFixed(2)}</strong></td>
+                        <td><span class="badge bg-secondary">${block.records_count}</span></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+                document.getElementById('resultsSection').style.display = 'block';
+                
+                // Store data globally for Excel export
+                window.currentData = data.data;
+                window.hasMapping = data.stats.has_mapping;
+                
+            } catch (error) {
+                document.getElementById('loadingSection').style.display = 'none';
+                document.getElementById('errorMessage').textContent = error.message;
+                document.getElementById('errorSection').style.display = 'block';
+            }
+        });
+        
+        // Excel Download
+        document.getElementById('downloadExcelBtn').addEventListener('click', async () => {
+            if (!window.currentData) {
+                alert('Няма данни за експорт');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/export-excel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        data: window.currentData,
+                        has_mapping: window.hasMapping
+                    })
+                });
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Командировки_${new Date().toISOString().slice(0,7)}.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                } else {
+                    alert('Грешка при генериране на Excel файл');
+                }
+            } catch (error) {
+                console.error('Excel export error:', error);
+                alert('Грешка: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>
 
